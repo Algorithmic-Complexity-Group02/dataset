@@ -2,58 +2,56 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 
-# Cargar los datos de animes y usuarios desde los archivos CSV
 df_animes = pd.read_csv("animeTest.csv")
-df_usuarios = pd.read_csv("profiles2.csv")
+df_usuarios = pd.read_csv("profileTest.csv")
 
+nodos = {}
+bordes = []
 
-# Crear un grafo vacío
-G = nx.Graph()  # Para un grafo no dirigido
-# O bien
-# G = nx.DiGraph()  # Para un grafo dirigido
-
-# Agregar nodos de animes al grafo
 for _, row in df_animes.iterrows():
     anime_uid = row["uid"]
-    G.add_node(anime_uid, tipo="anime", data=row)
-
-# Agregar nodos de usuarios al grafo
-for _, row in df_usuarios.iterrows():
-    user_profile = row["profile"]
-    G.add_node(user_profile, tipo="usuario", data=row)
+    nodos[anime_uid] = {"tipo": "anime", "data": row, "title": row["title"]}
 
 for _, row in df_usuarios.iterrows():
     user_profile = row["profile"]
-    favorite_animes = row["favorites_anime"]
+    nodos[user_profile] = {"tipo": "usuario", "data": row, "nombre_perfil": user_profile}
+
+for _, row in df_usuarios.iterrows():
+    user_profile = row["profile"]
     
+    # Utilizar split para dividir la cadena y luego eliminar los corchetes y espacios
+    favorite_animes_str = row["favorites_anime"]
+    favorite_animes = [anime_id.strip(" '[]") for anime_id in favorite_animes_str.split(',')]
+
     for anime_uid in favorite_animes:
-        G.add_edge(user_profile, anime_uid, tipo_interaccion="favorito")
+        anime_uid = int(anime_uid)
+        bordes.append((user_profile, anime_uid, {"tipo_interaccion": "favorito"}))
+
+G = {"nodos": nodos, "bordes": bordes}
+
+print("Número de nodos:", len(G["nodos"]))
+print("Número de bordes:", len(G["bordes"]))
+
+print("Valores de los nodos:")
+for node, data in G["nodos"].items():
+    tipo = data.get('tipo', 'Desconocido')
+    if tipo == 'anime':
+        print(f"Anime: {node}, Título: {data.get('title', 'Desconocido')}")
+    elif tipo == 'usuario':
+        print(f"Usuario: {node}, Nombre de perfil: {data.get('nombre_perfil', 'Desconocido')}")
 
 
+G_nx = nx.DiGraph()
+G_nx.add_nodes_from(G["nodos"].items())
+G_nx.add_edges_from(G["bordes"])
 
-# Crear un grafo de ejemplo (reemplaza esto con tu grafo real)
-G = nx.Graph()
-G.add_edge("Usuario1", "Anime1")
-G.add_edge("Usuario1", "Anime2")
-G.add_edge("Usuario2", "Anime2")
-G.add_edge("Usuario3", "Anime3")
+pos = nx.spring_layout(G_nx)
+labels_anime = nx.get_node_attributes(G_nx, 'title')
+labels_usuario = nx.get_node_attributes(G_nx, 'nombre_perfil')
 
-# Dibuja el grafo
-pos = nx.spring_layout(G)  # Posición de los nodos
-nx.draw(G, pos, with_labels=True, node_size=500, node_color='skyblue', font_size=10, font_color='black')
+colores_nodos = ['skyblue' if data['tipo'] == 'anime' else 'orange' for node, data in G_nx.nodes(data=True)]
 
-# Muestra el grafo en pantalla
-plt.show()
-# Crear un grafo de ejemplo (reemplaza esto con tu grafo real)
-G = nx.Graph()
-G.add_edge("Usuario1", "Anime1")
-G.add_edge("Usuario1", "Anime2")
-G.add_edge("Usuario2", "Anime2")
-G.add_edge("Usuario3", "Anime3")
+nx.draw(G_nx, pos, with_labels=True, labels={**labels_anime, **labels_usuario},
+        node_size=500, node_color=colores_nodos, font_size=10, font_color='black')
 
-# Dibuja el grafo
-pos = nx.spring_layout(G)  # Posición de los nodos
-nx.draw(G, pos, with_labels=True, node_size=500, node_color='skyblue', font_size=10, font_color='black')
-
-# Muestra el grafo en pantalla
 plt.show()
